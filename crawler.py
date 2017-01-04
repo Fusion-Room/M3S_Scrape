@@ -50,7 +50,7 @@ def getSearchInfo():
 
     print('Please type a source')
     print('Either type in the exact name of the source you require, or type "A" for *all* Arabic sources, "C" for all Chinese, "E" for all English, "F" for all Farsi, or "R" for all Russian.')
-    # TODO figure out the conditional logic behind switching from individual sources to all sources
+
 
     source = raw_input('>').lower()
     print('Please enter your search term.')
@@ -77,26 +77,25 @@ def getSearchInfo():
 
 
 
-def initialSearch(userData):
-    # this should be the beginning of each new search
-    # TODO decompose this function into reusable bits for things like pulling a source array upon login.
-
-    # TEST WAIT.... SEE IF IT REDUCES INSTANCES OF FREESING UP
+def inputSearchTerm(userData):
     # WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="SearchBarContainer"]/table/tbody/tr/td[2]/')))
     driver.find_element_by_xpath('//*[@id="SearchBarContainer"]/table/tbody/tr/td[2]/input').click()
     driver.find_element_by_xpath('//*[@id="SearchBarContainer"]/table/tbody/tr/td[2]/input').clear()
     driver.find_element_by_xpath('//*[@id="SearchBarContainer"]/table/tbody/tr/td[2]/input').send_keys(
         userData['sTerm'])
 
-    # DATE RANGE
 
+
+
+def inputDateRange(userData):
     driver.find_element_by_xpath('//*[@id="SearchBarContainer"]/table/tbody/tr/td[2]/input').click()
     time.sleep(6)
     driver.find_element_by_xpath('// *[ @ id = "panelbar"] / li[2]').click()
     time.sleep(1)
     driver.find_element_by_xpath('//*[@id="TimestampDropDown"]/div[5] / a').click()
     WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="TimestampDropDown"]/div[5] / a')))
-    WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '// *[ @ id = "SearchFilterContainerstart_time_adv"]')))
+    WebDriverWait(driver, 60).until(
+        EC.element_to_be_clickable((By.XPATH, '// *[ @ id = "SearchFilterContainerstart_time_adv"]')))
     driver.find_element_by_xpath('// *[ @ id = "SearchFilterContainerstart_time_adv"]').click()
     driver.find_element_by_xpath('// *[ @ id = "SearchFilterContainerstart_time_adv"]').clear()
     driver.find_element_by_xpath('// *[ @ id = "SearchFilterContainerstart_time_adv"]').send_keys(
@@ -106,7 +105,8 @@ def initialSearch(userData):
     driver.find_element_by_xpath('//*[@id="SearchFilterContainerend_time_adv"]').send_keys(
         userData['stDate'] + ' 12:00 AM')
 
-    # SOURCES
+
+def inputSourceLang(userData):
     driver.find_element_by_xpath('//*[@id="panelbar"]/li[3]').click()
     driver.find_element_by_xpath('// *[ @ id = "panelbar"] / li[3]').click()
     time.sleep(1)
@@ -115,13 +115,19 @@ def initialSearch(userData):
     time.sleep(4)
     driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/span').click()
     time.sleep(4)
-    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[2]/div/ul/li').click()
-    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[2]/div/ul/li/input').clear()
-    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[2]/div/ul/li/input').send_keys(
+    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[1]/div/ul/li').click()
+    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[1]/div/ul/li/input').clear()
+    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[1]/div/ul/li/input').send_keys(
         userData['source'])
     time.sleep(4)
-    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[2]/div/ul/li/input').send_keys(Keys.RETURN)
+    driver.find_element_by_xpath('//*[@id="panelbarAdvanced"]/li[2]/div[1]/div/ul/li/input').send_keys(Keys.RETURN)
     time.sleep(4)
+
+
+
+def initialSearch(userData):
+
+
 
 
 
@@ -134,10 +140,7 @@ def initialSearch(userData):
 
 
 
-
-
 def resultsParser(userData):
-
     wordCount = userData['isLimit']
     WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="ToolbarContentTitle"]/span[1]')))
     resultCount = driver.find_element_by_xpath('//*[@id="ToolbarContentTitle"]/span[1]').text
@@ -153,21 +156,47 @@ def resultsParser(userData):
     print('This scrape is finished.')
     driver.close()
 
-
-
-
-def searchGenie(userData): #this is the function that coordinates all other searches.
+def singleSearchShibboleth(userData):
     langArray = ['a', 'c', 'f', 'r']
+    sourceArray = []
 
     if userData['source'] not in langArray:
         print('test')
         # TODO execute just one search process
     else:
+        inputSearchTerm(userData)
+        inputDateRange(userData)
+        inputSourceLang(userData)
 
         sourceArray = driver.find_elements_by_css_selector("li[class^='search-choice'] span")
         for x in sourceArray:
-            print(x.text)
-            # TODO get array of sources for each language
+            sourceArray.append(x.text)
+        return(sourceArray)
+
+
+
+
+
+
+
+
+
+
+def searchGenie(userData): #this is the function that coordinates all other searches.
+    source = singleSearchShibboleth(userData)
+    if type(source) == list:
+        for x in source:
+            userData['source'] = x
+            inputSearchTerm(userData)
+            inputDateRange(userData)
+            inputSource(userData)
+            driver.find_element_by_xpath('//*[@id="SearchBarContainer"]/table/tbody/tr/td[3]/div').click()
+    else:
+        #TODO single source search here
+
+
+
+
 
 
 
@@ -194,11 +223,10 @@ def sequence():
     userData = getSearchInfo()
     logOn()
     searchGenie(userData) # this is the function that coordinates all other searches.
-    initialSearch(userData) # Runs an initial search
     resultsParser(userData) # Parses results and kicks off Ripper
     # ripper
 
-
+# TODO Fold Ripper logic into search Genie and test the process so far
 
 sequence()
 
