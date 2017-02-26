@@ -176,6 +176,121 @@ def singleSearchShibboleth(userData):
 
 
 
+def sourceTokenTime(encodedlist, words, wordCount): # checks for wordcount and returns encoded list
+
+    if wordCount == 'no':
+        encodedlist.extend([(x.text + ' ') for x in words])
+        return encodedlist
+    else:
+        encodedlist.extend([(x.text + ' ') for x in words[:600]]) # conrad
+        return encodedlist # conrad
+
+
+
+
+
+def articleMonster(resultCount, wordCount):
+    articlediagnum= 0
+    row = 0
+
+    while articlediagnum != resultCount : # this is the whole funct, basically.
+        print(articlediagnum) # this shows here we are in the results count
+        words = []
+        WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="Source_Name"]')))
+        WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.CLASS_NAME, 'sourceToken')))
+        WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.CLASS_NAME, 'sourceToken')))
+        time.sleep(5)
+        words = driver.find_elements_by_class_name('sourceToken')
+
+        articleBufferString = ''
+
+
+        # Adds Source Tokens to List
+
+        encodedlist = []
+
+        try:
+            encodedlist = sourceTokenTime(encodedlist,words, wordCount)
+
+        except:
+            print("""ERROR ERROR
+                this was unattached. now attempting to go to the next page...
+                """)
+            time.sleep(7)
+            driver.execute_script("AdjustTranscriptLayout.NextButton();")
+            words = []
+            print('major error')
+
+            WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, '//*[@id="Source_Name"]')))
+            WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.CLASS_NAME, 'sourceToken')))
+            WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.CLASS_NAME, 'sourceToken')))
+            time.sleep(5)
+            words = driver.find_elements_by_class_name('sourceToken')
+
+            articleBufferString = ''
+            time.sleep(2)
+            encodedlist = sourceTokenTime(encodedlist,words, wordCount)
+
+        # metadata
+
+        articleBufferString += articleBufferString.join(encodedlist)
+
+        try:
+            videoContent = driver.find_element_by_xpath('//*[@id="MediaPlayerDiv"]')
+            print "this exists"
+            articleSource = driver.find_element_by_xpath('//*[@id="Source_Name"]')
+            articleDate = driver.find_element_by_xpath('// *[ @ id = "Author1"] / td[2] / span')
+            printinglist = []
+            printinglist.append(articleBufferString)
+            articleSource = articleSource.get_attribute('value').encode('utf-8')
+            articleDate = articleDate.get_attribute('value').encode('utf-8')
+
+            # # backUPCSV
+            # printinglist.append(articleSource)
+            # printinglist.append(articleDate)
+            # backupresultDoc.writerow(printinglist)
+            #
+            #
+
+
+
+            # Fancy Excel
+            col = 0
+            resultDoc.write(row, col, articleSource)
+            resultDoc.write(row, col + 1, articleDate)
+            resultDoc.write(row, col + 2, articleBufferString)
+            row += 1
+
+            WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '// *[ @ id = "PageForward"]')))
+            driver.execute_script("AdjustTranscriptLayout.NextButton();")
+            articlediagnum += 1
+        except:
+            articleSource = driver.find_element_by_xpath('//*[@id="Source_Name"]')
+            articleDate = driver.find_element_by_class_name('sourceCaptureTime')
+            printinglist = []
+            printinglist.append(articleBufferString)
+            articleSource = articleSource.get_attribute('value').encode('utf-8')
+            articleDate = articleDate.get_attribute('value').encode('utf-8')
+
+            # # backUPCSV
+            # printinglist.append(articleSource)
+            # printinglist.append(articleDate)
+            # backupresultDoc.writerow(printinglist)
+            #
+            #
+
+
+
+            # Fancy Excel
+            col = 0
+            resultDoc.write(row, col, articleSource)
+            resultDoc.write(row, col + 1, articleDate)
+            resultDoc.write(row, col + 2, articleBufferString)
+            row += 1
+
+            WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '// *[ @ id = "PageForward"]')))
+            driver.execute_script("AdjustTranscriptLayout.NextButton();")
+            articlediagnum += 1
 
 
 
@@ -192,6 +307,7 @@ def searchGenie(userData): #this is the function that coordinates all other sear
             inputSource(userData)
             driver.find_element_by_xpath('//*[@id="SearchBarContainer"]/table/tbody/tr/td[3]/div').click()
     else:
+        print("whoops")
         #TODO single source search here
 
 
@@ -203,6 +319,7 @@ def searchGenie(userData): #this is the function that coordinates all other sear
 
 
 def logOn():
+
     shelfFile = shelve.open('m3sshelf')
     Username = shelfFile['un']
     Password = shelfFile['pw']
